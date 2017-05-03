@@ -73,7 +73,6 @@ interface management system."
   :depends-on (#:mcclim-bitmaps
                #:conditional-commands
                #:mcclim-layouts/tab
-
                #:mcclim-bezier
                #:mcclim-render
                #:mcclim-box))
