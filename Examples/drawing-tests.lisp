@@ -1401,8 +1401,27 @@
 ;;; currently broken and the test case is commented out for now.
 (define-drawing-test "16) Bezier Area" (stream)
     "Draws a single bezier-area. Currently this is quite slow and needs to be optimized. Also, the shape of the drawn bezier area is not particularly attractive."
-  (let* ((r1 (mcclim-bezier:make-bezier-area* '(100 100 200 200 300 200 400 100 300 50 200 50 100 100))))
-    (mcclim-bezier:draw-bezier-design* stream r1)))
+  (clim:draw-rectangle* stream 0 0 200 200 :filled t :ink clim:+grey90+)
+  (let* ((r1 (mcclim-bezier:make-bezier-area* '(120 160 35 200 220 280 220 40 180 160 160 180 120 160))))
+    (mcclim-bezier:draw-bezier-design* stream r1 :ink +cyan2+)
+    (loop for segment in (mcclim-bezier:segments r1)
+       for i from 1
+       do (with-slots ((p0 mcclim-bezier:p0)
+                       (p1 mcclim-bezier:p1)
+                       (p2 mcclim-bezier:p2)
+                       (p3 mcclim-bezier:p3))
+              segment
+            (draw-point stream p0 :ink +blue+ :line-thickness 6)
+            (draw-text stream (format nil "P~D ~D ~D" i (point-x p0) (point-y p0)) p0)
+            (draw-point stream p1 :ink +red+ :line-thickness 6)
+            (draw-text stream (format nil "C~D ~D ~D" i (point-x p1) (point-y p1)) p1)
+            (draw-line  stream p0 p1 :ink +green+ :line-thickness 2)
+            (draw-point stream p2 :ink +red+ :line-thickness 6)
+            (draw-text stream (format nil "C~D ~D ~D" (1+ i) (point-x p2) (point-y p2)) p2)
+            (draw-line  stream p1 p2 :ink +green+ :line-thickness 2)
+            (draw-point stream p3 :ink +blue+ :line-thickness 6)
+            (draw-text stream (format nil "P~D ~D ~D" (1+ i) (point-x p3) (point-y p3)) p3)
+            (draw-line  stream p2 p3 :ink +green+ :line-thickness 2)))))
 
 (define-drawing-test "16) Bezier Curve" (stream)
     "Draws a single bezier curve. This is currently broken as it should just draw the stroke of the bezier and instead renders the design as a bezier area."
