@@ -134,18 +134,21 @@
            (column-width (text-style-width text-style medium)))
       (with-accessors ((ncolumns text-editor-ncolumns)
                        (nlines text-editor-nlines)) pane
-        (apply #'space-requirement-combine* #'(lambda (req1 req2)
-                                                (or req2 req1))
-               (call-next-method)
-               (let ((width (if ncolumns
-                                (+ (* ncolumns column-width))
-                                width))
-                     (height (if nlines
-                                 (+ (* nlines line-height))
-                                 height)))
-                 (list
-                  :width width :max-width width :min-width width
-                  :height height :max-height height :min-height height)))))))
+        (let ((width (if ncolumns
+                         (+ (* ncolumns column-width))
+                         width))
+              (height (if nlines
+                          (+ (* nlines line-height))
+                          height)))
+          (space-requirement-combine* #'(lambda (req1 req2)
+                                          (or req2 req1))
+                                      (call-next-method)
+                                      :width width
+                                      :max-width width
+                                      :min-width width
+                                      :height height
+                                      :max-height height
+                                      :min-height height))))))
 
 (defmethod allocate-space ((pane drei-text-editor-substrate) w h)
   (resize-sheet pane w h))

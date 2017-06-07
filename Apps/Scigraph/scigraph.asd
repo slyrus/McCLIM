@@ -29,17 +29,14 @@
                  (:file "scigraph/popup-accept-methods")
                  (:file "scigraph/duplicate-methods")
                  (:file "scigraph/frame")
-                 (:file "scigraph/export")
                  (:file "scigraph/demo-frame")))
 
 (defsystem #:scrigraph/dwim
   :depends-on (#:mcclim)
   :components ((:file "dwim/package")
-               (:file "dwim/feature-case")
                (:file "dwim/macros")
                (:file "dwim/tv")
                (:file "dwim/draw")
                (:file "dwim/present")
                (:file "dwim/extensions")
-               (:file "dwim/wholine")
-               (:file "dwim/export")))
+               (:file "dwim/wholine")))

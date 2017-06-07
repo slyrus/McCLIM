@@ -27,14 +27,6 @@ advised of the possiblity of such damages.
 
 (in-package :dwim)
 
-(eval-when (compile load eval)
-  (export '(status-pane status-line set-status-line mouse-documentation-pane 
-	    *include-machine-name-in-status-line-p*
-	    *frame-for-status-line* *time-type*
-	    initialize-status-line make-status-line refresh-status-line
-	    noting-progress note-progress)
-	  'dwim))
-
 ;;; The status line is a small pane associated with a frame which provides
 ;;; status information, such as:
 ;;;  1. time of day
@@ -82,21 +74,18 @@ advised of the possiblity of such damages.
 (defparameter *include-machine-name-in-status-line-p* nil)
 
 (defun whoami ()
-  #FEATURE-CASE
-  ((:unix 
-    (let ((host-string (and *include-machine-name-in-status-line-p*
-			    (let ((raw-host-string (getenv "HOST")))
-			      (cond ((null raw-host-string) nil)
-				    ((let ((dot-pos (position #\. raw-host-string)))
-				       (if dot-pos
-					   (subseq (the string raw-host-string) 0 dot-pos)
-					 raw-host-string)))))))
-	  (user-string (getenv "USER")))
-      (if host-string
-	  (concatenate 'string user-string "@" host-string)
-	user-string)))
-    (:lispm (let ((me si:*user*))
-	      (and me (scl:send me :lispm-name))))))
+  #+unix
+  (let ((host-string (and *include-machine-name-in-status-line-p*
+                          (let ((raw-host-string uiop:getenv))
+                            (cond ((null raw-host-string) nil)
+                                  ((let ((dot-pos (position #\. raw-host-string)))
+                                     (if dot-pos
+                                         (subseq (the string raw-host-string) 0 dot-pos)
+                                         raw-host-string)))))))
+        (user-string (uiop:getenv "USER")))
+    (if host-string
+        (concatenate 'string user-string "@" host-string)
+        user-string)))
 
 
 ;;; frequently used strings:
@@ -108,16 +97,16 @@ advised of the possiblity of such damages.
 (defparameter expand-string "Expanding Memory")
 
 (defclass status-line ()
-    ((stream :initform nil :initarg :stream :accessor status-line-stream)
-     (time :initform empty-string :accessor status-line-time)
-     (ptime :initform nil :accessor status-line-ptime)
-     (username :initform (whoami) :accessor status-line-username)
-     (pusername :initform nil :accessor status-line-pusername)
-     (process :initform run-string :accessor status-line-process)
-     (pprocess :initform nil :accessor status-line-pprocess)
-     (progress :initform empty-string :accessor status-line-progress)
-     (pprogress :initform nil :accessor status-line-pprogress)
-     (thermometer :initform 0 :accessor status-line-thermometer)))
+  ((stream :initform nil :initarg :stream :accessor status-line-stream)
+   (time :initform empty-string :accessor status-line-time)
+   (ptime :initform nil :accessor status-line-ptime)
+   (username :initform (whoami) :accessor status-line-username)
+   (pusername :initform nil :accessor status-line-pusername)
+   (process :initform run-string :accessor status-line-process)
+   (pprocess :initform nil :accessor status-line-pprocess)
+   (progress :initform empty-string :accessor status-line-progress)
+   (pprogress :initform nil :accessor status-line-pprogress)
+   (thermometer :initform 0 :accessor status-line-thermometer)))
 
 (defun make-status-line (stream) (make-instance 'status-line :stream stream))
 
@@ -125,26 +114,16 @@ advised of the possiblity of such damages.
   "Used for progress notes, but only for clim 0.9.")
 
 (defun frame-for-status-line ()
-  #FEATURE-CASE
-  ((:clim-0.9 *frame-for-status-line*)
-   ((or :clim-1.0 :clim-2)
-    (and (boundp 'clim:*application-frame*) clim:*application-frame*))
-   ((not :clim) (and (boundp 'dw:*program-frame*) dw:*program-frame*))))
+  (and (boundp 'clim:*application-frame*) clim:*application-frame*))
 
 (defmethod status-pane ((any t))
-  #+clim nil
-  #-clim (if (typep any 'dw::program-frame)
-	     (status-pane (send any :program))))
+  nil)
 
 (defmethod status-line ((any t))
-  #+clim nil
-  #-clim (if (typep any 'dw::program-frame)
-	     (status-line (send any :program))))
+  nil)
 
 (defmethod mouse-documentation-pane ((any t))
-  #+clim nil
-  #-clim (if (typep any 'dw::program-frame)
-	     (mouse-documentation-pane (send any :program))))
+  nil)
 
 (defvar *status-line-sheet-lock* nil)
 
@@ -274,14 +253,6 @@ advised of the possiblity of such damages.
     (fmakunbound old-name)
     name))
 
-(defun string-for-process-whostate (process)
-  (let ((whostate
-	 #+allegro (mp:process-whostate process)
-	 #+lucid (lcl::process-whostate process)
-	 #+genera (scl:send-if-handles process :whostate)))
-    (if (and whostate (search "Input" whostate :test #'equalp))
-	input-string run-string)))
-
 (defun repair-unbelievable-status-lines ()
   ;; Sometimes the status line does not get reset properly,
   ;; particularly after a GC event.  So this
@@ -363,7 +334,6 @@ advised of the possiblity of such damages.
      ;; my simple window lock.  You might miss one clock cycle but
      ;; the next one will (probably) work fine.
      (set-all-status-lines (time-string) 'status-line-time)
-     #+lucid (repair-unbelievable-status-lines)
      (sleep quantum))))
 
 (let ((clock-process nil))
@@ -391,7 +361,6 @@ advised of the possiblity of such damages.
 
 (defun initialize-status-line ()
   "Do this once at run time to get everything started."
-  #+lucid (setq lucid::*gc-silence* #'gc-notify-users)
   (advise-debugger)
   (advise-read-frame)
   (advise-menus)
@@ -400,7 +369,6 @@ advised of the possiblity of such damages.
 
 (defun halt-status-line ()
   "Undo the side effects of INITIALIZE-STATUS-LINE."
-  #+lucid (setq lucid::*gc-silence* nil)
   (unadvise-debugger)
   (unadvise-read-frame)
   (stop-clock))
@@ -412,10 +380,7 @@ advised of the possiblity of such damages.
 	 (with-status-line (,string 'status-line-progress frame)
 	   (unwind-protect (progn ,@body)
 	     (note-progress 0.0 1.0 frame)))
-         #-genera
-	 (progn ,@body)
-	 #+genera
-	 (tv:noting-progress (,string) ,@body))))
+         (progn ,@body))))
 
 (defun note-progress (numerator &optional
 		      (denominator 1.0)
@@ -447,163 +412,38 @@ advised of the possiblity of such damages.
 		      ;; KRA 09JUL93: JM had this f-o commented out.  However,
 		      ;; it lets user see actual progress.  If this is too
 		      ;; slow we should be smarter about drawing fewer lines.
-		      (force-output stream))))))))
-	#+genera
-	(if (boundp 'tv:*current-progress-note*)
-	    (tv:note-progress numerator denominator)))))
+		      (force-output stream)))))))))))
 
 ;;;
 ;;; Modify the underlying system.
 ;;;
 
-#+clim-0.9
-(defmethod graft-children ((graft clim-shared::graft))
-  ;; Hack to provide optimized access.
-  (slot-value graft 'silica::children))
-
-#+clim-0.9
-(defmethod clim:read-frame-command :around ((frame t) stream)
-	   (with-process-state (input-string) (call-next-method)))
-
-#+clim-0.9
-(defmethod ci::accept-values-top-level :around ((frame t) &rest args)
-	   (with-process-state (input-string) (call-next-method)))
-
-#+clim-0.9
-(defmethod clim:execute-frame-command :around ((frame t) command &optional run)
-	   (with-process-state (run-string) (call-next-method)))
-
 (defun advise-menus ()
   "Modify menus so that the process state is 'Ready'"
-  #+clim-0.9
-  (advise 'ci::menu-choose-from-drawer
-	  'old-menu-choose-from-drawer
-	  #'(lambda (&rest arguments)
-	      (with-process-state (input-string)
-		(apply 'old-menu-choose-from-drawer arguments))))
-  #+(or clim-1.0 clim-2)
   (advise 'clim::menu-choose-from-drawer
 	  'old-menu-choose-from-drawer
 	  #'(lambda (&rest arguments)
 	      (with-process-state (input-string)
 		(apply 'old-menu-choose-from-drawer arguments)))))
 
-#+(or clim-1.0 clim-2)
 (defmethod clim:read-frame-command :around ((frame t) &key stream)
   (declare (ignore stream))
   (with-process-state (input-string) (call-next-method)))
 
-#+(or clim-1.0 clim-2)
 (defmethod clim:execute-frame-command :around ((frame t) command)
   (declare (ignore command))
   (with-process-state (run-string) (call-next-method)))
 
-#-clim
-(scl:defwhopper (dw::program-command-evaluator dw::program) ()
-  (let ((e (or (scl:continue-whopper)
-	       #'(lambda (program command arguments)
-		   (declare (ignore program))
-		   (apply command arguments)))))
-    #'(lambda (program command arguments)
-	(if (status-line program)
-	    (with-process-state (run-string)
-	      (funcall e program command arguments))
-	    (funcall e program command arguments)))))
-
-#-clim
-(scl:defwhopper (tv:who-line-screen-mouse-documentation-update-internal
-		  tv:generic-who-line-screen-mixin) ()
-  (let ((old-doc (send (tv:get-who-line-field :mouse-documentation scl:self)
-		       :who-line-item-state)))
-    (prog1
-      (scl:continue-whopper)
-      (let ((doc (send (tv:get-who-line-field :mouse-documentation scl:self)
-		       :who-line-item-state)))
-	(when (not (eq old-doc doc))
-	  (for-each-frame (frame)
-	    (let ((pane (mouse-documentation-pane frame)))
-	      (when pane
-		(window-clear pane)
-		(and doc (write-string doc pane))))))))))
-
 (defun advise-read-frame ()
-  #+clim-1.0
-  (advise 'clim::accept-values-1
-	  'old-accept-values-1
-	  #'(lambda (&rest arguments)
-	      (with-process-state (input-string)
-		(apply 'old-accept-values-1 arguments))))
-  #+clim-2
   (advise 'clim-internals::invoke-accepting-values
 	  'old-invoke-accepting-values
 	  #'(lambda (&rest arguments)
 	      (with-process-state (input-string)
-		(apply 'old-invoke-accepting-values arguments))))
-  #-clim
-  (advise 'dw::read-program-command
-	  'old-read-program-command
-	  #'(lambda (&rest arguments)
-	      (let ((program (car arguments)))
-		(if (or (status-line program)
-			(and (typep program 'dw:accept-values)
-			     (not (dw::program-frame program))))
-		    (with-process-state (input-string)
-		      (apply 'old-read-program-command arguments))
-		  (apply 'old-read-program-command arguments))))))
+		(apply 'old-invoke-accepting-values arguments)))))
 
 (defun unadvise-read-frame ()
-  #+clim-1.0
-  (unadvise 'clim::accept-values-1 'old-accept-values-1)
-  #+clim-2
   (unadvise 'clim-internals::invoke-accepting-values
-	    'old-invoke-accepting-values)
-  #-clim
-  (unadvise 'dw::read-program-command 'old-read-program-command))
-
-#+lucid
-(defun gc-notify-users (when)
-  "Because *gc-silence* procedures are called when normal memory allocation
-   is impossible, an executing function that is bound to *gc-silence* should
-   not use more than the amount of storage that is reserved by the value of
-   the keyword :reserved-dynamic.  This value defaults to 1024.
-   (WE SHOULD SET IT TO 10000.)
-
-   In addition, because *gc-silence* procedures are called when scheduling
-   is inhibited, such procedures should not try to acquire process locks...
-   for example, writing to a window uses locks.
-   (WE ACQUIRE THEM ANYWAY BY BINDING LUCID::*POTENTIAL-DEADLOCK-ACTION*)"
-
-  (let ((LUCID::*POTENTIAL-DEADLOCK-ACTION* :IGNORE))
-    (case when
-      (:before
-	(format *terminal-io* "~%;;;GC~%")
-	(set-all-status-lines GC-string 'status-line-process
-			      :how-many 1 :record-p nil))
-      (:dynamic-expansion
-	(format *terminal-io* "~%;;;Dynamic Expansion~%")
-	(set-all-status-lines expand-string 'status-line-process
-			      :how-many 1 :record-p nil))
-      (:reserved-expansion
-	(format *terminal-io* "~%;;;Reserved Expansion~%")
-	(set-all-status-lines expand-string 'status-line-process
-			      :how-many 1 :record-p nil))
-      (otherwise
-	;; We don't really know what state those processes are in,
-	;; so take a guess.  Ideally, we should store those states
-	;; away and restore them when GC is done.       
-	(set-all-status-lines run-string 'status-line-process
-			      :how-many 1 :record-p nil)))))
-
-#+debug
-(defun tester ()
-  (lucid::with-scheduling-inhibited
-      (time
-       ;; Conses somewhere between 1100 and 1350 bytes.
-       ;; Dont know why the variation exists.
-       (gc-notify-users :before))))
-
-#+somewhere-else
-(lcl:change-memory-management :reserved-dynamic 10000)
+	    'old-invoke-accepting-values))
 
 (defvar *panic* nil			; dont panic yet
   "Dynamically bound to prevent recursively entering the debugger.")
@@ -630,8 +470,7 @@ advised of the possiblity of such damages.
 	 (if *panic*
 	     (apply #'old-invoke-debugger arguments)
 	   (let* ((*panic* t)
-		  (*standard-input* #+lucid lcl::*initial-io*
-				    #-lucid *terminal-io*)
+		  (*standard-input* *terminal-io*)
 		  (*standard-output* *standard-input*)
 		  (*query-io* *standard-input*)
 		  (*terminal-io* *standard-input*)

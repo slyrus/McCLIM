@@ -76,7 +76,7 @@ advised of the possiblity of such damages.
       ;; Okay, try to display, but let the graph clip me too.
       (with-clipping-to-graph (graph stream nil)
 	;; Move the cursor to shadow clim bugs.
-	(with-character-style ((or style (stream-current-text-style stream))
+	(dwim:with-character-style ((or style (stream-current-text-style stream))
 			       stream)	
 	  (multiple-value-bind (sl st) (uv-for-display self)
 	    (multiple-value-setq (sl st) (uv-to-screen stream sl st))
@@ -375,7 +375,7 @@ advised of the possiblity of such damages.
       (multiple-value-setq (u v) (uv-to-screen stream u v))
       (device-draw-circle stream u v radius :alu alu :filled nil))))
 
-(define-presentation-type moving-point ()
+(dwim:define-presentation-type moving-point ()
   :description "a moving point"
   :printer ((object stream)
 	    (format stream "~S" object))
@@ -383,13 +383,13 @@ advised of the possiblity of such damages.
 	   (read-char stream)
 	   (error "You must select an annotation with the mouse.")))
 
-(define-presentation-to-command-translator
+(dwim:define-presentation-to-command-translator
   com-move-annotation-point
   (moving-point :command-name com-move-object
 		:command-table :graph
 		;; Annotations are covered by a different translator.
 		:tester ((object) 
-			 (not (dwim::typep* object 'basic-annotation))) ; NLC
+			 (not (typep object 'basic-annotation))) ; NLC
 		:gesture :select :menu t :documentation "Move")
   (object &key WINDOW)
   `(,object ,WINDOW))
@@ -552,10 +552,8 @@ advised of the possiblity of such damages.
       (closest-point
 	u v
 	#'(lambda (function dataset)
-	    (declare (downward-function))
 	    (map-data dataset
 		      #'(lambda (datum)
-			  (declare (downward-function))
 			  (multiple-value-bind (fric frac) (datum-position dataset datum)
 			    (multiple-value-bind (u1 v1) (xy-to-uv graph fric frac)
 			      (funcall function u1 v1 datum))))
@@ -619,7 +617,7 @@ advised of the possiblity of such damages.
     ((annotation :initform nil :initarg :annotation :accessor annotation))
   (:documentation "Couple a polygon to an annotation")) 
 
-(define-presentation-type polygon-presentation ()
+(dwim:define-presentation-type polygon-presentation ()
   :description "a polygon"
   :printer ((object stream)
 	    (format stream "~S" object))
@@ -627,7 +625,7 @@ advised of the possiblity of such damages.
 	   (read-char stream)
 	   (error "You must select a polygon with the mouse.")))
 
-(define-presentation-to-command-translator
+(dwim:define-presentation-to-command-translator
     com-move-polygon
     (polygon-presentation :command-name com-move-object
 			  :command-table :graph
@@ -668,7 +666,6 @@ advised of the possiblity of such damages.
   (or (call-next-method)
       (let ((graph (graph self)))
 	(some #'(lambda (corner)
-		  (declare (downward-function))
 		  (let ((u (first corner))
 			(v (second corner)))
 		    (multiple-value-setq (u v) (xy-to-uv graph u v))
@@ -841,7 +838,7 @@ advised of the possiblity of such damages.
 
 ;;; Make individual datums mouse-sensitive.  This is a little bit tricky,
 ;;; since datums can literally be any lisp object.  
-(define-presentation-to-command-translator com-identify
+(dwim:define-presentation-to-command-translator com-identify
   (expression :command-name com-identify
 	      :command-table :graph
 	      :gesture :select

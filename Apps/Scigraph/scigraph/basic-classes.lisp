@@ -33,17 +33,11 @@ advised of the possiblity of such damages.
 ;;; a menu. If a name is not provided one will be generated automatically like
 ;;; OBJECT-1, OBJECT-2 ....
 
-(eval-when (compile load eval)
-  (export '(named-mixin name name-string make-name))
-  (export '(named-object) 'tool)
-  (export 'declare-required-method)
-  )
-
 (defclass named-mixin
-	  ()
-    ((name :initform nil :initarg :name :reader name))
+    ()
+  ((name :initform nil :initarg :name :reader name))
   (:documentation
-    "Allows each instance to have a name.  One is generated for it if not provided.
+   "Allows each instance to have a name.  One is generated for it if not provided.
      The name is always a symbol."))
 
 (defmethod initialize-instance :after ((self named-mixin) &key)

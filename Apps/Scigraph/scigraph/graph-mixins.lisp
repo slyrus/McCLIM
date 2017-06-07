@@ -31,7 +31,7 @@ advised of the possiblity of such damages.
 
 
 
-(defclass GRAPH-MOUSE-RESOLUTION-MIXIN (basic-graph)
+(defclass graph-mouse-resolution-mixin (basic-graph)
   ((dx-mouse :initform nil :initarg :dx-mouse)  ; Resolution (in units)
    (dy-mouse :initform nil :initarg :dy-mouse)) ; used to convert from
 						; mouse -> xy coordinates
@@ -131,19 +131,19 @@ advised of the possiblity of such damages.
     (setq cu (max 10 cu))		; Make sure it fits on window!?
     (text self STREAM cu cv number-string :alu %draw)))
 
-(defmethod AXIS-LABEL-HORIZONTAL ((self GRAPH-BORDER-MIXIN) STREAM
+(defmethod axis-label-horizontal ((self GRAPH-BORDER-MIXIN) STREAM
 				  x y label the-tick-size)
   ;; Put label centered below numbers
   (with-slots (x-tick-numbering) self
     (multiple-value-bind (cu cv)
 	(char-position-relative-to-uv
-	  self STREAM x y (- (* (length label) 0.5))
-	  (if (< the-tick-size 0) 1.5
+         self stream x y (- (* (length label) 0.5))
+         (if (< the-tick-size 0) 1.5
 	     (if (null x-tick-numbering) -1.0 -2.0))
-	  0)
+         0)
       (text self STREAM cu cv label :alu %draw))))
 
-(defmethod AXIS-LABEL-VERTICAL ((self GRAPH-BORDER-MIXIN) STREAM
+(defmethod axis-label-vertical ((self GRAPH-BORDER-MIXIN) STREAM
 				x y label the-tick-size)
   (declare (ignore the-tick-size))
   (with-slots (y-tick-numbering) self
@@ -207,7 +207,6 @@ advised of the possiblity of such damages.
 	     (drawer (make-optimized-line-displayer %draw 1 t))
 	     (line-drawer
 	      #'(lambda (x1 y1 x2 y2)
-		  (declare (downward-function))
 		  (multiple-value-setq (x1 y1) (uv-to-screen stream x1 y1))
 		  (multiple-value-setq (x2 y2) (uv-to-screen stream x2 y2))
 		  (funcall drawer stream x1 y1 x2 y2))))
@@ -236,7 +235,6 @@ advised of the possiblity of such damages.
 	(linear-axis ull v0 uur v0 xll xur dtick 
 		     tick-size x-tick-numbering line-drawer
 		     #'(lambda (x y number)
-			 (declare (downward-function))
 			 (axis-number-horizontal
 			  self STREAM
 			 (if (zerop number) (+ x (stream-character-width stream)) x)
@@ -254,7 +252,6 @@ advised of the possiblity of such damages.
       (linear-axis ull vll uur vll xll xur dtick 
 		   tick-size x-tick-numbering line-drawer
 		   #'(lambda (x y number)
-		       (declare (downward-function))
 		       (axis-number-horizontal
 			 self STREAM x y
 			 (float-to-string number (x-digits self))
@@ -280,7 +277,6 @@ advised of the possiblity of such damages.
 	(linear-axis u0 vll u0 vur yll yur dtick 
 		     dtick-size y-tick-numbering line-drawer
 		     #'(lambda (x y number)
-			 (declare (downward-function))
 			 (axis-number-vertical
 			  self STREAM
 			  x
@@ -296,7 +292,6 @@ advised of the possiblity of such damages.
       (linear-axis ull vll ull vur yll yur dtick 
 		   dtick-size y-tick-numbering line-drawer
 		   #'(lambda (x y number)
-		       (declare (downward-function))
 		       (axis-number-vertical self STREAM x y
 					     (float-to-string number (y-digits self))
 					     dtick-size))
@@ -436,33 +431,33 @@ advised of the possiblity of such damages.
   ;; use default values for ticks as defaults for grids
   (auto-tick xmin xmax))
 
-(defmethod DISPLAY-HORIZONTAL-GRID ((self graph-grid-mixin) STREAM)
+(defmethod display-horizontal-grid ((self graph-grid-mixin) STREAM)
   (with-slots (yll yur y-dgrid uur ull xll y-auto-grid) self
     (let ((dgrid (cond (y-auto-grid (auto-grid yll yur))
 		       (t y-dgrid)))
 	  (grid-size (- uur ull)))
       (linear-graph-grid self STREAM xll yll xll yur yll yur dgrid grid-size))))
 
-(defmethod DISPLAY-VERTICAL-GRID ((self graph-grid-mixin) STREAM)
+(defmethod display-vertical-grid ((self graph-grid-mixin) STREAM)
   (with-slots (xll xur x-dgrid vll vur yll x-auto-grid) self
     (let ((dgrid (cond (x-auto-grid (auto-grid xll xur))
 		       (t x-dgrid)))
 	  (grid-size (- vur vll)))		; pixels
       (linear-graph-grid self STREAM xll yll xur yll xll xur dgrid grid-size))))
 
-(defmethod DISPLAY-GRID ((self graph-grid-mixin) STREAM)
+(defmethod display-grid ((self graph-grid-mixin) STREAM)
   (with-slots (show-grid) self
     (when show-grid
       (display-vertical-grid self STREAM)
       (display-horizontal-grid self STREAM))))
 
-(defmethod DISPLAY :before ((self graph-grid-mixin) STREAM)
+(defmethod display :before ((self graph-grid-mixin) STREAM)
   (display-grid self STREAM))
 
-(defclass GRAPH-GRID-OB-MIXIN (graph-grid-mixin) ())
+(defclass graph-grid-ob-mixin (graph-grid-mixin) ())
 
 
-(defclass GRAPH-DATASETS-MIXIN (graph-border-mixin basic-graph)
+(defclass graph-datasets-mixin (graph-border-mixin basic-graph)
   ((datasets :initform nil :initarg :datasets :reader datasets)
    (hidden-datasets :initform nil :initarg :datasets :accessor hidden-datasets))
   (:documentation 
@@ -759,9 +754,6 @@ advised of the possiblity of such damages.
   "Determine if a presentation is a part of an incremental redisplay."
   (if (not presentation) nil
     (or 
-     #-clim
-     (typep (presentation-object presentation) 'dw::redisplay-piece)
-     #+clim-2
      (typep presentation 'standard-updating-output-record)
      (incrementally-redisplayable-presentation
       (presentation-superior presentation)))))

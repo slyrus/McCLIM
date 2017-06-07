@@ -77,13 +77,6 @@ advised of the possiblity of such damages.
 	(* (values (ceiling tick interval)) interval))))
 
 
-#+old
-(defun auto-tick (xmin xmax)
-  "Choose a tick interval based on some simple esthetics.
-   The tick interval is a multiple of 2 5 or 10, and there are <= 10 tick
-   marks along the axis."
-  (autotick-internal xmin xmax 1 10 10 5 2))
-
 (defun auto-tick (min max)
   (let* ((range (- max min))
 	 (tick (expt 10 (truncate (log range 10))))
@@ -99,8 +92,7 @@ advised of the possiblity of such damages.
   ;; turds.
   (make-array size
 	      :element-type
-	      #+lucid 'string-char
-	      #-lucid 'character
+	      'character
 	      :adjustable t
 	      :fill-pointer 0))
 
@@ -158,7 +150,6 @@ advised of the possiblity of such damages.
   (macrolet
     ((push-digits (number length string)
        `(dotimes (.i. ,length)
-	 (declare (ignore .i.))
 	 (vector-push-extend (digit-char (values (floor ,number))) ,string extension)
 	  (setf ,number (mod (* 10.0 ,number) 10.0)))))
     (push-digits number ilength string)	; Integer part.
@@ -201,7 +192,6 @@ advised of the possiblity of such damages.
 	     draw-line
 	     axis-number
 	     label)
-  (declare (downward-funarg draw-line axis-number label))
   (if (< umax umin) (rotatef umax umin))
   (if (minusp dtick) (setq dtick (- dtick)))
   (let* ((cos (- xmax xmin))

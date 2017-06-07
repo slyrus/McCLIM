@@ -37,7 +37,7 @@ advised of the possiblity of such damages.
 ;;;  that it does the right thing when you zoom or rescale.
 
 
-(define-presentation-type annotation ()
+(dwim:define-presentation-type annotation ()
   ;; This has to be in a file separate from (defclass annotation ...) because
   ;; otherwise clim 1.0 complains.  jpm.
   :description "an annotation"
@@ -53,20 +53,20 @@ advised of the possiblity of such damages.
 	   (read-char stream)
 	   (error "You must select an annotation with the mouse.")))
 
-(define-presentation-to-command-translator
+(dwim:define-presentation-to-command-translator
   com-move-annotation
   (annotation :command-name com-move-object
 	      :command-table :graph
 	      :gesture :select
 	      :menu t :documentation "Move")
-  (object &key WINDOW)
-  `(,object ,WINDOW))
+  (object &key window)
+  `(,object ,window))
 
 (define-graph-command com-delete-annotation ((object 'annotation) (window 'sheet))
   "Removes an annotation from a graph."
   (kill object window))
 
-(define-presentation-to-command-translator com-delete-annotation
+(dwim:define-presentation-to-command-translator com-delete-annotation
    (annotation :command-name com-delete-annotation
 	       :command-table :graph
 	       :gesture nil :documentation "Delete")
@@ -81,7 +81,7 @@ advised of the possiblity of such damages.
        (setf (style object) style)
        (display object window))))
 
-(define-presentation-to-command-translator com-change-annotation-style 
+(dwim:define-presentation-to-command-translator com-change-annotation-style 
    (annotation :command-name com-change-annotation-style
 	       :command-table :graph
 	       :gesture nil :documentation "Change Text Style")
@@ -92,7 +92,7 @@ advised of the possiblity of such damages.
   "Edit the text of the annotation."
    (edit object window))
 
-(define-presentation-to-command-translator com-edit-annotation
+(dwim:define-presentation-to-command-translator com-edit-annotation
    (annotation :command-name com-edit-annotation 
 	       :gesture nil
 	       :command-table :graph
@@ -121,7 +121,7 @@ advised of the possiblity of such damages.
   "Create an annotation and prompt the user for the annotation text."
   (annotate-something object WINDOW))
 
-(define-presentation-to-command-translator
+(dwim:define-presentation-to-command-translator
   com-annotations-menu
   (graph :command-name com-annotations-menu
 	 :command-table :graph
@@ -142,7 +142,7 @@ advised of the possiblity of such damages.
     (when dataset
       (annotate-data-point dataset window graph))))
 
-(define-presentation-to-command-translator
+(dwim:define-presentation-to-command-translator
   com-graph-identify-point
   (graph :command-name com-graph-identify-point
 	 :command-table :graph
@@ -164,7 +164,7 @@ advised of the possiblity of such damages.
     (when dataset
       (annotate-data-region dataset graph window))))
 
-(define-presentation-to-command-translator
+(dwim:define-presentation-to-command-translator
   com-graph-identify-region
   (graph :command-name com-graph-identify-region
 	 :command-table :graph
@@ -386,25 +386,7 @@ about fonts and pointer sensitivity.  It would be better to either drop the
 older classes in favor of cleaned up newer ones.  Someday, ...
 
 ||#
-#-clim
-(defmethod compute-y-annotation ((self annotated-borders-mixin) STREAM)
-  (with-slots (y-annotation ull vll vur y-label) self
-    (when y-label
-      (when (not y-annotation)
-	(let* ((annotation (make-border-annotation
-			     self STREAM y-label :left
-			     ull vll
-			     'y-label (/ pi 2) nil))
-	       (height nil))
-	  (setf (style annotation) (y-label-text-style self stream))
-	  (setq height (* (length y-label) (stream-line-height stream)))
-	  (set-uv-position annotation
-			   (- ull (* (stream-character-width stream) 3))
-			   (+ (values (truncate (+ vll vur) 2))
-			      (values (truncate height 2))))
-	  (setq y-annotation annotation))))))
 
-#+clim
 (defmethod compute-y-annotation ((self annotated-borders-mixin) STREAM)
   (with-slots (y-annotation ull vll vur y-label y-digits) self
     (when y-label
@@ -558,7 +540,6 @@ older classes in favor of cleaned up newer ones.  Someday, ...
     (dolist (dataset (datasets graph))
       (map-data-xy dataset
 		   #'(lambda (x y)
-		       (declare (downward-function))
 		       (when (and (<= left x right)
 				  (<= bottom y top))
 			 (incf count)))
@@ -601,7 +582,7 @@ older classes in favor of cleaned up newer ones.  Someday, ...
 
 (defmethod legend-exists-p ((self annotated-legend-mixin))
   (dolist (ann (annotations self))
-    (if (dwim::typep* ann 'legend-annotation) (return-from legend-exists-p t))) ;;;NLC
+    (if (typep ann 'legend-annotation) (return-from legend-exists-p t))) ;;;NLC
   nil)
 
 (defmethod display-annotations :before ((self annotated-legend-mixin) stream)

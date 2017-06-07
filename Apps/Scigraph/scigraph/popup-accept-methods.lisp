@@ -70,7 +70,7 @@ advised of the possiblity of such damages.
   "Edit the attributes of a graph in a dialog box."
   (popup-accept-from-presentation graph WINDOW PRESENTATION))
 
-(define-presentation-to-command-translator com-pop-edit-graph
+(dwim:define-presentation-to-command-translator com-pop-edit-graph
   (graph :command-name com-pop-edit-graph
 	 :command-table :graph
 	 :documentation "Edit Graph Borders & Labels..."
@@ -84,7 +84,7 @@ advised of the possiblity of such damages.
   "Edit the attributes of some graph data in a dialog box."
   (popup-accept-from-presentation dataset WINDOW PRESENTATION))
 
-(define-presentation-to-command-translator com-pop-edit-dataset
+(dwim:define-presentation-to-command-translator com-pop-edit-dataset
    (graph-data :command-name com-pop-edit-dataset
 	       :command-table :graph
 	       :documentation "Change Data Symbols..."
@@ -95,12 +95,10 @@ advised of the possiblity of such damages.
    (object &key presentation window)
   (list object window presentation))
 
-(install-command #+(or clim-0.9 (not clim)) 'accept-values
-		 #+(or clim-1.0 clim-2 mcclim) 'clim::accept-values
+(dwim:install-command 'clim::accept-values
 		 'com-pop-edit-dataset)
 
-#+(or clim-1.0 clim-2)
-(define-presentation-to-command-translator com-pop-edit-dataset
+(dwim:define-presentation-to-command-translator com-pop-edit-dataset
    (graph-data :command-name com-pop-edit-dataset
 	       :command-table clim::accept-values
 	       :documentation "Change Data Symbols..."

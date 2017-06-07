@@ -27,8 +27,8 @@ advised of the possiblity of such damages.
 
 (in-package :graph)
 
-(define-presentation-type graph ()
-  :description "a graph" 
+(dwim:define-presentation-type graph ()
+  :description "a graph"
   :printer ((object stream)
 	    (format #+broken redisplayable-format
 	     stream "~A" (name object)))
@@ -36,7 +36,7 @@ advised of the possiblity of such damages.
 	   (read-char stream)
 	   (error "You must select a graph with the mouse.")))
 
-(define-presentation-type graph-data ()
+(dwim:define-presentation-type graph-data ()
   :description "a graph dataset" 
   :printer ((object stream)
 	    (format #+broken redisplayable-format
@@ -71,7 +71,6 @@ advised of the possiblity of such damages.
 
 (defun save-postscript-graph (graph filename &key (width 400) (height 400))
   (with-open-file (s filename :direction :output)
-    #+(or clim-1 clim-2)
     (clim:with-output-to-postscript-stream (stream s)
       (display-graph graph :stream stream :width width :height height))))
 
@@ -88,31 +87,8 @@ advised of the possiblity of such damages.
 
 (defun window-reverse-video (window &optional (fore :white) (back :black))
   "Change the foreground/background colors of the window."
-  #FEATURE-CASE
-  (((not :clim)
-    (progn
-      ;; In Dynamic Windows, fore and back could be *real* colors rather than just
-      ;; black/white, but in practice that seems to cause some problems.  Try for
-      ;; example drawing on a color background using :flip alu.
-      (if (eq back :black)
-	  (setq fore tv:alu-andca back tv:alu-ior)
-	(setq fore tv:alu-ior back tv:alu-andca))
-      (scl:send window :set-char-aluf fore)
-      (scl:send window :set-erase-aluf back)))
-   (:clim-0.9
-    (let ((medium (sheet-medium window))
-	  (viewport (pane-viewport window)))
-      (setq fore (alu-for-stream window fore)
-	    back (alu-for-stream window back))
-      (setf (medium-background medium) back
-	    (medium-foreground medium) fore)
-      ;; This last part shouldn't be required, but it is because
-      ;; of the wierd way that CLIM repaints a window.
-      (setf (slot-value viewport 'windshield::background)
-	back)))
-   ((or :clim-1.0 :clim-2)
-    (setf (medium-foreground window) (alu-for-stream window fore)
-	  (medium-background window) (alu-for-stream window back)))))
+  (setf (medium-foreground window) (alu-for-stream window fore)
+        (medium-background window) (alu-for-stream window back)))
 
 (defun autoscale-graphs (graphs autoscale-type)
   "Let the graphs mutually decide what scaling limits to use.
@@ -178,7 +154,6 @@ advised of the possiblity of such damages.
 	    (dotimes (column columns)
 	      (let ((g nil))
 		(dotimes (row rows)
-		  (declare (ignore row))
 		  (let ((temp (pop graphs)))
 		    (and temp (push temp g))))
 		(stream-set-cursor-position*
@@ -233,7 +208,7 @@ advised of the possiblity of such damages.
   "Zoom in on a selected rectangle of the graph."
   (zoom-in graph window))
 
-(define-presentation-to-command-translator zoom-in
+(dwim:define-presentation-to-command-translator zoom-in
   (graph :command-name com-zoom-in 
 	 :command-table :graph
 	 :gesture nil :documentation "Zoom In...")
@@ -244,7 +219,7 @@ advised of the possiblity of such damages.
   "Undo the results of the most recent zoom-in command."
   (zoom-out graph WINDOW))
 
-(define-presentation-to-command-translator zoom-out
+(dwim:define-presentation-to-command-translator zoom-out
   (graph :command-name com-zoom-out 
 	 :command-table :graph
 	 :tester ((object) (and (graph-p object) (zoom-stack object)))
@@ -260,7 +235,7 @@ advised of the possiblity of such damages.
      (multiple-value-setq (x y) (slider-interact graph WINDOW x y t))
      (and x y (describe-point graph x y))))
 
-(define-presentation-to-command-translator slider-crosshairs
+(dwim:define-presentation-to-command-translator slider-crosshairs
   (graph :command-name com-slider-crosshairs
 	 :command-table :graph
 	 :gesture nil :documentation "Crosshairs")
@@ -271,7 +246,7 @@ advised of the possiblity of such damages.
   "Erase and then redraw a graph."
   (refresh graph window))
 
-(define-presentation-to-command-translator com-redraw-graph
+(dwim:define-presentation-to-command-translator com-redraw-graph
    (graph :command-name com-redraw-graph
 	  :command-table :graph
 	  :gesture nil :documentation "Redraw Graph")
@@ -283,7 +258,7 @@ advised of the possiblity of such damages.
   (setf (hidden-datasets graph) nil)
   (refresh graph window))
 
-(define-presentation-to-command-translator com-reveal-datasets
+(dwim:define-presentation-to-command-translator com-reveal-datasets
   (graph :command-name com-reveal-datasets
 	 :command-table :graph
 	 :gesture nil :documentation "Reveal Hidden Data"
@@ -300,7 +275,7 @@ advised of the possiblity of such damages.
       (push dataset (hidden-datasets g))
       (refresh g window))))
 
-(define-presentation-to-command-translator com-remove-dataset
+(dwim:define-presentation-to-command-translator com-remove-dataset
    (graph-data :command-name com-remove-dataset
 	       :command-table :graph
 	       :gesture nil :documentation "Hide Data"
@@ -335,23 +310,7 @@ advised of the possiblity of such damages.
 		      :alu (if selected-p %draw %erase))
       (force-output stream))))
 
-#-clim-2
-(define-presentation-type dash-pattern ()
-  :description "a line dash pattern"
-  :parser ((stream)
-	   (completing-from-suggestions (stream)
-	     (dotimes (i 7)
-	       (suggest (princ-to-string i) i))))
-  :printer ((object stream)
-	    (draw-dash-sample stream object nil nil))
-  :accept-values-displayer
-  ((stream object query-identifier)
-   (accept-values-choose-from-sequence
-     stream *dash-pattern-alist* object query-identifier
-     :drawer #'draw-dash-sample)))
-
-#+clim-2
-(define-presentation-type-abbreviation dash-pattern ()
+(clim:define-presentation-type-abbreviation dash-pattern ()
   `((member ,@(let ((numbers nil))
 		(dotimes (i 7) (push i numbers))
 		(nreverse numbers)))
@@ -359,14 +318,12 @@ advised of the possiblity of such damages.
     :printer present-line-style
     :highlighter highlight-line-style))
 
-#+clim-2
 (defun present-line-style (object stream &key acceptably)
   (declare (ignore acceptably))
   (if (stringp object) (setq object (read-from-string object)))
   (with-room-for-graphics (stream)
     (draw-dash-sample stream object (princ-to-string object) nil)))
 
-#+clim-2
 (defun highlight-line-style (continuation object stream)
   (clim:surrounding-output-with-border
    (stream)
@@ -378,41 +335,32 @@ advised of the possiblity of such damages.
 ;;; probably because AND and OR are missing.  Here we kludge up 
 ;;; a solution until CLIM gets better.
 ;;; CLIM IS BETTER NOW (CLIM 2.0.BETA).  LETS GET RID OF THIS.  JPM.
-#+clim
-(define-presentation-type string-or-none ()
+(dwim:define-presentation-type string-or-none ()
   :description "a string or None"
   :printer ((object stream)
 	    (if (or (not object) (equal object ""))
 		(write-string "None" stream)
-	      (present object 'string :stream stream)))
+                (clim:present object 'string :stream stream)))
   :parser ((stream)
-	   (let ((string (accept 'string :stream stream :prompt nil :default nil)))
+	   (let ((string (dwim:accept 'string :stream stream :prompt nil :default nil)))
 	     (setq string (string-trim '(#\space) string))
 	     (if (or (string= string "") 
 		     (string-equal string "None"))
 		 (values nil 'string-or-none)
-	       (values string 'string-or-none)))))
+                 (values string 'string-or-none)))))
 
-#-clim
-(define-presentation-type string-or-none ()
-  :abbreviation-for '(dw:null-or-type string))
-
-#+clim
-(define-presentation-type number-or-none ()
+(dwim:define-presentation-type number-or-none ()
   :description "a number or None"
   :printer ((object stream)
 	    (if object
-		(present object 'number :stream stream)
+		(clim:present object 'number :stream stream)
 		(write-string "None" stream)))
   :parser ((stream)
-	   (let ((string (read-token stream)))
+	   (let ((string (dwim:read-token stream)))
 	     (if (string-equal (string-trim '(#\space) string) "None")
 		 (values nil 'number-or-none)
 		 (let ((number (read-from-string string)))
 		   (if (numberp number)
 		       (values number 'number-or-none)
-		       (input-not-of-required-type stream string 'number-or-none)))))))
+		       (dwim:input-not-of-required-type stream string 'number-or-none)))))))
 
-#-clim
-(define-presentation-type number-or-none ()
-  :abbreviation-for '(dw:null-or-type number))

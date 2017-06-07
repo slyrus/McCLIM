@@ -107,7 +107,6 @@ advised of the possiblity of such damages.
   ;; contour levels between MIN and MAX.
 
   ;; See Example TRY-CONTOUR.
-  (declare (downward-funarg surface plotter map-levels))
   (let ((x x-min)
 	(y y-min)
 	x2 y2
@@ -119,7 +118,6 @@ advised of the possiblity of such damages.
 	 ;; UL---UR  Consider all four bits, (level < ul,ur,lr,lr) = num
 	 ;; |    |   Then num and (not num) have same contours. Therefore, 
 	 ;; LL---LR  colapse num and (not num) into the 1<= 7.
-	 (declare (downward-function))
 	 (macrolet
 	   ((plot (dx1 dy1 dx2 dy2)
 	      `(funcall plotter
@@ -233,7 +231,6 @@ advised of the possiblity of such damages.
 						   (* .01 major-interval))
 						3 0)))
 		 (map-levels (min max function)
-		   (declare (downward-funarg function))
 		   (let ((dlevel minor-interval))
 		     (do ((level (* dlevel (values (round min dlevel))) (+ level dlevel)))
 			 ((> level max))

@@ -152,7 +152,6 @@ advised of the possiblity of such damages.
 	      (let ((displayer (legend-datum-displayer self graph)))
 		(map-data legend-data
 			  #'(lambda (datum)
-			      (declare (downward-function))
 			      (multiple-value-bind (x y)
 				  (datum-position legend-data datum)
 				(multiple-value-setq (x y) (xy-to-uv graph x y))
@@ -226,7 +225,7 @@ advised of the possiblity of such damages.
   (multiple-value-bind (px foo py bar) (uv-inside self)
     (declare (ignore foo bar))
     (setq py (- py (legend-offset self)))
-    (with-character-style ((parse-text-style *legend-style*) stream)
+    (dwim:with-character-style ((parse-text-style *legend-style*) stream)
       (let ((hidden (hidden-datasets self)))
 	(dolist (dataset (datasets self))
 	  (or (member dataset hidden)

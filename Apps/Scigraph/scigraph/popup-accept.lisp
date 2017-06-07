@@ -65,15 +65,8 @@ advised of the possiblity of such damages.
     "Get list of instance variables."
     (let ((slots 
 	   ;; Blech.  What's wrong with my package?
-           #FEATURE-CASE
-           ((:mcclim
-	     (mapcar #'clim-mop:slot-definition-name
-		     (clim-mop:class-slots (class-of self))))
-	    ((and (not :mcclim) (not :mcl))
-             (mapcar #'slot-definition-name (class-slots (class-of self))))
-            ((and (not :mcclim) :mcl)
-             (mapcar #'ccl:slot-definition-name (ccl:class-class-slots (class-of self)))))
-           ))
+           (mapcar #'clim-mop:slot-definition-name
+                   (clim-mop:class-slots (class-of self)))))
       (sort slots #'string-lessp)))
 
 (defconstant *unbound* '%%unbound%%)
@@ -98,13 +91,6 @@ advised of the possiblity of such damages.
 (defmethod abort-protect ((self t) (continuation t))
   ;;(declare (values instance aborted-p))
   (let ((snapshot (snapshot-object-state self)))
-    #-clim
-    (si:condition-case (ERR)
-	 (funcall continuation)
-       (si:abort
-	 (restore-object-state self snapshot)
-	 :abort))
-    #+clim
     (let ((value (funcall continuation)))
       (when (eq value :abort)
 	(restore-object-state self snapshot))
@@ -139,7 +125,7 @@ advised of the possiblity of such damages.
   ;;(declare (values self aborted-p))
   (values self (eq (popup-accept self stream) :abort)))
 
-(define-command (com-pop-edit :command-table :global)
+(clim:define-command (com-pop-edit :command-table :global)
     ((object 'invisible-object) (window 'sheet) (presentation 'invisible-object))
    (popup-accept-from-presentation object WINDOW PRESENTATION))
 
@@ -147,7 +133,7 @@ advised of the possiblity of such damages.
 ;;; The documentation string is too generic and tends to confuse naive users.
 ;;; Elsewhere there are better translators specific to those ptypes.  This
 ;;; translator remains as a tool that others might want to use.
-(define-presentation-to-command-translator com-pop-edit
+(dwim:define-presentation-to-command-translator com-pop-edit
    (t :command-name com-pop-edit
       :command-table :graph
       :tester ((object) (popup-acceptable object))
@@ -157,9 +143,8 @@ advised of the possiblity of such damages.
    (object &key presentation window)
   (list object window presentation))
 
-(install-command #+(or clim-0.9 (not clim)) :accept-values
-		 #+(or clim-1.0 clim-2 mcclim) 'clim::accept-values
-		 'com-pop-edit)
+(dwim:install-command 'clim::accept-values
+                      'com-pop-edit)
 
 
 ;;;
@@ -295,14 +280,6 @@ advised of the possiblity of such damages.
 		     (pop-accept-items SELF MENU-MENU-STREAM GRAPH-WINDOW)
 		     ))
 	  while (pop-accept-unsatisfied-warnings SELF)
-	  do (progn (beep) (beep)))
+	  do (progn (clim:beep) (clim:beep)))
     result))
 
-#+clim-0.9
-(defmethod ci::execute-frame-command :after ((frame ci::accept-values) command &optional x)
-   (declare (ignore command x))
-   ;; Force an extra redisplay so things look right (clim extension).
-   (when *avv-extra-redisplay* 
-     (let ((avv (ci::output-record-parent ci::*current-avv-record*)))
-       (when avv
-	 (ci::redisplay avv (slot-value frame 'ci::stream))))))

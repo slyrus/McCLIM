@@ -12,7 +12,7 @@ that the name Bolt Beranek and Newman Inc. not be used in advertising or
 publicity pertaining to distribution of the software without specific,
 written prior permission. Any distribution of this software or derivative
 works must comply with all applicable United States export control laws.
-
+>
 BBN makes no representation about the suitability of this software for any
 purposes.  It is provided "AS IS", without express or implied warranties
 including (but not limited to) all implied warranties of merchantability
@@ -124,28 +124,7 @@ advised of the possiblity of such damages.
 			  :alu %flip
 			  :filled t)))))
 
-#-clim-2
-(define-presentation-type graph-symbol (&key (symbols '(:+ :x :* :point :triangle
-							:box :diamond :circle))
-					     (size 10))
-  :description "a graph symbol"
-  :parser ((stream)
-	   (completing-from-suggestions (stream)
-					(dolist (symbol symbols)
-					  (suggest (string symbol) symbol))))
-  :printer ((object stream)
-	    (write-string (string object) stream))
-  :accept-values-displayer
-  ((stream object query-identifier)
-   (accept-values-choose-from-sequence
-    stream symbols object query-identifier
-    :drawer
-    #'(lambda (stream object pretty-name selected-p)
-	(declare (ignore pretty-name))
-	(draw-avv-symbol object size stream selected-p)))))
-
-#+clim-2 
-(define-presentation-type-abbreviation graph-symbol
+(clim:define-presentation-type-abbreviation graph-symbol
     (&key (symbols '(:+ :x :* :point :triangle
 		     :box :diamond :circle))
 	  (size 10) graph)

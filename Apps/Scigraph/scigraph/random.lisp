@@ -27,28 +27,11 @@ advised of the possiblity of such damages.
 
 (in-package :statistics)
 
-(eval-when (compile load eval)
-  (export 'random-seed)
-  (export 'with-seed)
-  (export 'uniform)
-  (proclaim '(inline uniform))
-  (proclaim '(inline uniform-basic))
-  (proclaim '(inline combined-uniform))
-  (export 'uniform-0-1)
-  (export 'uniform-between)
-  (export 'gaussian-random)
-  (export 'gaussian)
-  (export 'random-yes-no)
-  (export 'erf))
-
 ;;; PORTABLE UNIFORM AND GAUSSIAN RANDOM NUMBERS
 
 #||
 Should work in most Common LISP's.  See description of UNIFORM-BASIC.
-This was written before CL to provide a portable random number generator.  If
-you want to use the portable uniform-basic function then do (PUSHNEW *FEATURES*
-SYSTEM-RANDOM), and you will use the portable uniform random number generator
-provided below.
+This was written before CL to provide a portable random number generator.
 
 Linus Schrage, A More Portable Fortran Random Number Generator,
   ACM Trans. Math. Soft., V5, No. 2, p 132-138, 1979.
@@ -61,21 +44,10 @@ CACM, June 1988, Vol 31, Number 6, p. 742-774.
 ||#
 
 ;;; Better numbers, see Ecuyer, 1988.
-(eval-when (compile load eval)
+(eval-when (:compile-toplevel :load-toplevel :execute)
   (defconstant *uniform-a* 40692)
   (defconstant *uniform-m* 2147483399))
 
-(defun random-seed ()
-  "Return a random seed."
-  #-system-random (get-internal-real-time)	; integer
-  #+system-random (make-random-state))		; structure
-
-#-system-random
-(eval-when (compile load eval)
-  (when (>= most-positive-fixnum *uniform-m*)
-    (pushnew ':fast-random-numbers *features*)))
-
-#-fast-random-numbers
 (defun uniform-basic (previous-fixnum)
   "Returns a random fixnum between 1 and (1- *uniform-m*)."
   #||
@@ -137,21 +109,14 @@ CACM, June 1988, Vol 31, Number 6, p. 742-774.
   "evaluates body with the seed of the random numbers set to S-NEWSEED.
    the value of S-NEWSEED is updated.  Thus this is a way of
    Keeping several sequences of random numbers with their own seeds."
-  #-system-random
-  `(let ((*uniform-seed* ,s-newseed))
-     (prog1 (progn ,@body) 
-	    (setf ,s-newseed *uniform-seed*)))
-  #+system-random
   `(let ((*random-state* ,s-newseed))
-     (prog1 (progn ,@body) 
-	    (setq ,s-newseed *random-state*))))
+    (prog1 (progn ,@body) 
+      (setf ,s-newseed *random-state*))))
 
 (defun uniform ()
   "Returns the next uniform random number in the sequence
    To have your own sequence, use the macro WITH-SEED."
-  #-system-random (setq *uniform-seed* 
-			(uniform-internal *uniform-seed* *uniform-m* *uniform-a*))
-  #+system-random (random *uniform-m* *random-state*))
+  (random *uniform-m* *random-state*))
 
 (defun make-uniform-1-stream (seed)
   ;; Stream of uniform random numbers between 0 and 1
@@ -177,22 +142,11 @@ CACM, June 1988, Vol 31, Number 6, p. 742-774.
    If low-num and/or high-num are fixnums, a fixnum is returned."
   (if (= low-num high-num)
       low-num
-    #-system-random
-    (if (and (integerp low-num) (integerp high-num))
-	(+ low-num (values (truncate (uniform)
-				     (/ #.(- *uniform-m* 1) (- high-num low-num)))))
-      (+ low-num (* (* (uniform) #.(/ (float *uniform-m*)))
-		    (- high-num low-num))))
-    #+system-random
     (+ low-num (random (- high-num low-num)))  ))
 
 (defun gaussian-random-1 ()
   "Returns a gaussian random variable with mean 0.0 and standard deviation 1.0.
    Good tails."
-  #-system-random 
-  (* (sqrt (* -2.0 (log (uniform-0-1))))
-     (sin (* #.(* 2.0 (coerce pi 'single-float)) (uniform-0-1))))
-  #+system-random
   (* (sqrt (* -2.0 (log (random 1.0))))
      (sin (* #.(* 2.0 (coerce pi 'single-float)) (random 1.0)))))
 

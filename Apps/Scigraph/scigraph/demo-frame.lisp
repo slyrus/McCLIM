@@ -108,7 +108,7 @@ advised of the possiblity of such damages.
      create
      (left 0) (bottom 0)
      (width 600) (height 400)
-     (wait-until-done #+genera t #-genera nil))	; Start a new process?
+     (wait-until-done nil))	; Start a new process?
   "Start a demo scigraph frame."
   (let ((graph (make-sample-graph)))
     (add-dataset graph
@@ -159,15 +159,12 @@ itself drawn on a graph.  PLAIN-DATA simply draws a line of slope 1 from 0
 to 100.
 
 ||#
-(defclass plain-data
-    ()
-  ())
+(defclass plain-data () ())
 
 (defmethod name ((data plain-data))
   (format nil "~A" data))
 
 (defmethod auto-scale-limits ((data plain-data) type xll xur yll yur)
-  (declare (ignore xll xur yll yur))
   (list
    (min 0 xll)
    (max 100 xur)
@@ -179,7 +176,7 @@ to 100.
       (xy-to-stream graph stream 0 0)
     (multiple-value-bind (x2 y2)
 	(xy-to-stream graph stream 100 100)
-      (draw-line* stream x1 y1 x2 y2))))
+      (clim:draw-line* stream x1 y1 x2 y2))))
 
 (defun make-plain-demo ()
   (let ((d (make-instance 'plain-data))

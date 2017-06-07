@@ -95,17 +95,14 @@ PROTOCOL:
 (defmethod map-data ((dataset t) function (data sequence))
   "Map FUNCTION over each datum."
   #-(or sbcl cmu)
-  (declare (downward-funarg function))
   (map nil function data))
 
 (defmethod map-data-xy ((dataset ESSENTIAL-GRAPH-DATA-MAP-MIXIN) function data)
   "Map function over each x y pair."
   #-(or sbcl cmu)
-  (declare (downward-funarg function))
   (declare (compiled-function function))
   (map-data dataset
 	    #'(lambda (datum)
-		(declare (downward-function))
 		(multiple-value-bind (x y)
 		    (datum-position dataset datum)
 		  (funcall function x y)))
@@ -130,7 +127,6 @@ PROTOCOL:
       (declare (compiled-function displayer Trans)
 	       (fixnum H))
       (map-data self #'(lambda (datum)
-			 (declare (downward-function))
 			 (multiple-value-bind (x y) (datum-position self datum)
 			   (multiple-value-setq (x y) (funcall trans x y))
 			   (setq y (- H (the fixnum y)))
@@ -214,7 +210,7 @@ PROTOCOL:
 (defclass GRAPH-DATA-DITHER-MIXIN ()
   ((x-dither :initform 0 :initarg :x-dither :accessor x-dither)
    (y-dither :initform 0 :initarg :y-dither :accessor y-dither)
-   (dither-seed :initform (random-seed) :initarg :dither-seed :accessor dither-seed))
+   (dither-seed :initform (make-random-state) :initarg :dither-seed :accessor dither-seed))
   (:documentation
    "Used for data whose values are quantized, so that many datums will not map
     to exactly the same screen location.  Modifies displayer methods but not
@@ -261,7 +257,7 @@ PROTOCOL:
 
 (defmethod display-data :around ((self graph-data-dither-mixin) stream graph)
   ;; Always use the same seed to get the same dithering.
-  (with-seed (dither-seed self)
+  (stat:with-seed (dither-seed self)
     (call-next-method self stream graph)))
 
 
@@ -839,7 +835,6 @@ way.  The graph takes the union of the limits returned.
 	  (ymax nil))
       (map-data-xy self
 		   #'(lambda (x y)
-		       (declare (downward-function))
 		       (when (or (eq type :both)
 				 (and (eq type :x) (<= y-bottom y y-top)))
 			 (collect-range < xmin x xmax))
@@ -926,7 +921,7 @@ way.  The graph takes the union of the limits returned.
 (defmethod x-mean ((dataset simple-data-statistics-mixin))
   (let ((sumx 0) (count 0))
     (map-data-xy dataset #'(lambda (x y)
-			     (declare (downward-function) (ignore y))
+			     (declare (ignore y))
 			     (incf sumx x)
 			     (incf count))
 		 (data dataset))
@@ -938,7 +933,7 @@ way.  The graph takes the union of the limits returned.
   (let ((sumy 0) (count 0))
     (declare (fixnum count))
     (map-data-xy dataset #'(lambda (x y)
-			     (declare (downward-function) (ignore x))
+			     (declare (ignore x))
 			     (incf sumy y)
 			     (incf count))
 		 (data dataset))
@@ -953,7 +948,7 @@ way.  The graph takes the union of the limits returned.
 	  (values meanx 0)
 	  (progn
 	    (map-data-xy dataset #'(lambda (x y)
-				     (declare (downward-function) (ignore y))
+				     (declare (ignore y))
 				     (incf sumsqx (expt (- x meanx) 2)))
 			 (data dataset))
 	    (values meanx (sqrt (/ sumsqx (float (1- count))))))))))
@@ -965,7 +960,7 @@ way.  The graph takes the union of the limits returned.
 	  (values meany 0)
 	  (progn
 	    (map-data-xy dataset #'(lambda (x y)
-				     (declare (downward-function) (ignore x))
+				     (declare (ignore x))
 				     (incf sumsqy (expt (- y meany) 2)))
 			 (data dataset))
 	    (values meany (sqrt (/ sumsqy (float (1- count))))))))))
@@ -973,7 +968,7 @@ way.  The graph takes the union of the limits returned.
 (defmethod x-min-and-max ((dataset simple-data-statistics-mixin))
   (let (minx maxx)
     (map-data-xy dataset #'(lambda (x y)
-			     (declare (downward-function) (ignore y))
+			     (declare (ignore y))
 			     (when (or (not minx) (> minx x)) (setq minx x))
 			     (when (or (not maxx) (< maxx x)) (setq maxx x)))
 		 (data dataset))
@@ -983,7 +978,7 @@ way.  The graph takes the union of the limits returned.
 (defmethod y-min-and-max ((dataset simple-data-statistics-mixin))
   (let (miny maxy)
     (map-data-xy dataset #'(lambda (x y)
-			     (declare (downward-function) (ignore x))
+			     (declare (ignore x))
 			     (when (or (not miny) (> miny y)) (setq miny y))
 			     (when (or (not maxy) (< maxy y)) (setq maxy y)))
 		 (data dataset))
@@ -1044,7 +1039,6 @@ way.  The graph takes the union of the limits returned.
   (declare (compiled-function function))
   (map-data data
 	    #'(lambda (datum)
-		(declare (downward-function))
 		(multiple-value-bind (x y)
 		    (datum-position data datum)
 		  (if (surrounded-p dataset x y)
@@ -1056,7 +1050,6 @@ way.  The graph takes the union of the limits returned.
   (declare (compiled-function function))
   (map-data data
 	    #'(lambda (datum)
-		(declare (downward-function))
 		(multiple-value-bind (x y)
 		    (datum-position data datum)
 		  (if (surrounded-p dataset x y)
