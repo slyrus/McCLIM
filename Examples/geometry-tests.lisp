@@ -114,6 +114,55 @@
         (clim-sys:make-process #'run :name "Flexible App")
         (run))))
 
+;;
+;; Now let's make a nested pane.
+;;
+;; This not an application pane.
+(defclass nested-pane (permanent-medium-sheet-output-mixin climi::single-child-composite-pane)
+  ((resize-count :accessor resize-count :initform 0)
+   (transform-count :accessor transform-count :initform 0)))
+
+(defmethod shared-initialize :after ((obj nested-pane) slot-names &key)
+  (let ((child (make-pane 'simple-pane :witdh 400 :height 400)))
+    (setf (sheet-transformation child)
+          (make-transformation 1 0 0.1 1.1 0 0))
+    (sheet-adopt-child obj child)))
+
+(defmethod handle-repaint ((pane nested-pane) region)
+  (map nil
+       (lambda (child)
+         (print child *debug-io*)
+         (handle-repaint child +everywhere+))
+       (sheet-children pane))
+  )
+
+(defmethod note-sheet-region-changed ((pane nested-pane))
+  (incf (resize-count pane)))
+
+(defmethod note-sheet-transformation-changed ((pane nested-pane))
+  (incf (transform-count pane)))
+
+(define-application-frame nested-app () ()
+  (:panes
+   (nested (make-pane 'nested-pane :width 400 :height 400)))
+  (:layouts
+   (default nested)))
+
+(defvar *nested-app*)
+
+(defun nested-app-main (&key (new-process t))
+  (flet ((run ()
+           (let ((clim:*default-server-path*
+                  clim:*default-server-path*))
+             (setf (getf (cdr clim:*default-server-path*) :mirroring) :single)
+             (let ((frame (make-application-frame 'nested-app)))
+               (setf *nested-app* frame)
+               (run-frame-top-level frame)))))
+    (if new-process
+        (clim-sys:make-process #'run :name "Nested App")
+        (run))))
+
+
 #|
 (let ((pane (find-pane-named *flexible-app* 'flexible)))
   (multiple-value-bind (mxx mxy myx myy tx ty)
