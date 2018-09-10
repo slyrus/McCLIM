@@ -106,7 +106,7 @@
   (flet ((run ()
            (let ((clim:*default-server-path*
                   clim:*default-server-path*))
-             (setf (getf (cdr clim:*default-server-path*) :mirroring) :full)
+             (setf (getf (cdr clim:*default-server-path*) :mirroring) :single)
              (let ((frame (make-application-frame 'flexible-app)))
                (setf *flexible-app* frame)
                (run-frame-top-level frame)))))
