@@ -696,6 +696,16 @@ outside the clipping area should be grey.")
                                                        :line-thickness 4
                                                        :filled nil))))
 
+(define-drawing-test "05) Ellipse Rotation (Filled)" (stream)
+    ""
+  (test-simple-rotation-region stream
+                               #'(lambda (stream cx cy)
+                                   (clim:draw-ellipse* stream
+                                                       cx cy
+                                                       50 0 0 30
+                                                       :line-thickness 4
+                                                       :filled t))))
+
 (define-drawing-test "05) Ellipse slope line intersection" (stream)
     "Ellipse with rotation and limited angle is surrounded by its bounding
 rectangle. Slope lines go through the sheet and the intersections of lines with

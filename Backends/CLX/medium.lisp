@@ -716,9 +716,11 @@ translated, so they begin at different position than [0,0])."))
                                         0 (* 2 pi) t))))
                  (maybe-draw-border-points (line)
                    (multiple-value-bind (lx1 ly1) (line-start-point* line)
-                     (when (ellipse-border-p ellipse lx1 ly1) (draw-point lx1 ly1)))
+                     (when (ellipse-border-p ellipse lx1 ly1))
+                     (draw-point lx1 ly1))
                    (multiple-value-bind (lx2 ly2) (line-end-point* line)
-                     (when (ellipse-border-p ellipse lx2 ly2) (draw-point lx2 ly2))))
+                     (when (ellipse-border-p ellipse lx2 ly2))
+                     (draw-point lx2 ly2)))
                  (draw-line-1 (line)
                    (multiple-value-bind (lx1 ly1) (line-start-point* line)
                      (multiple-value-bind (lx2 ly2) (line-end-point* line)
@@ -730,8 +732,24 @@ translated, so they begin at different position than [0,0])."))
                  (draw-lines (scan-line)
                    (cond
                      ((region-equal scan-line +nowhere+))
-                     (filled (map-over-region-set-regions #'draw-line-1 scan-line))
-                     (t (map-over-region-set-regions #'maybe-draw-border-points scan-line)))))
+                     ((linep scan-line)
+                      (map-over-region-set-regions
+                       (if filled
+                           #'draw-line-1
+                           #'maybe-draw-border-points)
+                       scan-line))
+                     ((polylinep scan-line)
+                      (map-over-polygon-segments
+                       (lambda (x1 y1 x2 y2)
+                         (map-over-region-set-regions
+                          (if filled
+                              #'draw-line-1
+                              #'maybe-draw-border-points)
+                          (make-line* x1 y1 x2 y2)))
+                       scan-line))
+                     ((region-set-p scan-line)
+                      (map-over-region-set-regions #'draw-lines scan-line))
+                     (t (error "unknown region in %draw-rotated-ellipse")))))
           ;; O(n+m) because otherwise we may skip some points (better drawing quality)
           (progn ;if (<= width height)
             (loop for x from x1 to (+ x1 width) do
