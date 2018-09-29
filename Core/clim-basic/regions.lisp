@@ -2689,7 +2689,7 @@
 ;;;
 
 (defmethod print-object ((self standard-rectangle) stream)
-  (print-unreadable-object (self stream :type t :identity t)
+  (print-unreadable-object (self stream :type t :identity nil)
     (with-standard-rectangle (x1 y1 x2 y2)
       self
       (format stream "X ~S:~S Y ~S:~S" x1 x2 y1 y2))))
