@@ -752,58 +752,70 @@
       (values (+ cx x1) (+ cy y1) (+ cx x2) (+ cy y2)))))
 
 (defmethod region-intersection ((line line) (ellipse standard-ellipse))
-  (let (p1x p1y p2x p2y)
-    (multiple-value-setq (p1x p1y) (line-start-point* line))
-    (multiple-value-setq (p2x p2y) (line-end-point* line))
-    (let ((region (if (and (region-contains-position-p ellipse p1x p1y)
-                           (region-contains-position-p ellipse p2x p2y))
-                      line
-                      (multiple-value-bind (x1 y1 x2 y2)
-                          (cond ((= p1x p2x) (intersection-vline/ellipse ellipse p1x))
-                                ((= p1y p2y) (intersection-hline/ellipse ellipse p1y))
-                                (t (intersection-line/ellipse ellipse p1x p1y p2x p2y)))
-                        (if (some #'complexp (list x1 y1 x2 y2))
-                            +nowhere+
-                            (make-line* x1 y1 x2 y2))))))
-      (with-slots (start-angle end-angle) ellipse
-        (when (or (null start-angle) (region-equal region +nowhere+))
-          (return-from region-intersection region))
-        (multiple-value-bind (cx cy) (ellipse-center-point* ellipse)
-          (multiple-value-bind (sx sy) (%ellipse-angle->position ellipse start-angle)
-            (multiple-value-bind (ex ey) (%ellipse-angle->position ellipse end-angle)
-              (let* ((start-ray (make-line* cx cy sx sy))
-                     (end-ray (make-line* cx cy ex ey))
-                     (si (region-intersection region start-ray))
-                     (ei (region-intersection region end-ray))
-                     (sip (not (region-equal +nowhere+ si)))
-                     (eip (not (region-equal +nowhere+ ei)))
-                     (p1 (line-start-point region))
-                     (p2 (line-end-point region))
-                     (p1p (multiple-value-call
-                              #'region-contains-position-p ellipse (point-position p1)))
-                     (p2p (multiple-value-call
-                              #'region-contains-position-p ellipse (point-position p2))))
-                (cond
-                  ;; line goes through the center. Only in this case line may be
-                  ;; coincident with angle rays, so we don't have to bother with
-                  ;; checking later.
-                  ((region-contains-position-p region cx cy)
-                   (make-line (if p1p p1 (make-point cx cy))
-                              (if p2p p2 (make-point cx cy))))
-                  ;; line doesn't intersect any of angle rays
-                  ((and (not sip) (not eip))
-                   ;; p1p implies p2p here, but rounding may say otherwise
-                   (if (or p1p p2p) region +nowhere+))
-                  ;; line intersects with both angle rays
-                  ((and sip eip)
-                   ;; region difference may not work here due to float rounding
-                   (let ((guess-line (make-line p1 si)))
-                     (if (not (region-intersects-region-p guess-line end-ray))
-                         (region-union guess-line (make-line p2 ei))
-                         (region-union (make-line p1 ei) (make-line p2 si)))))
-                  ;; line intersect only one angle ray
-                  (t (make-line (if p1p p1 p2)
-                                (if sip si ei))))))))))))
+  (flet ((single-float-point (p)
+           (make-point (float (point-x p) 1.0s0)
+                       (float (point-y p) 1.0s0))))
+
+    (let (p1x p1y p2x p2y)
+      (multiple-value-setq (p1x p1y) (line-start-point* line))
+      (multiple-value-setq (p2x p2y) (line-end-point* line))
+      (let ((region (if (and (region-contains-position-p ellipse p1x p1y)
+                             (region-contains-position-p ellipse p2x p2y))
+                        line
+                        (multiple-value-bind (x1 y1 x2 y2)
+                            (cond ((= p1x p2x) (intersection-vline/ellipse ellipse p1x))
+                                  ((= p1y p2y) (intersection-hline/ellipse ellipse p1y))
+                                  (t (intersection-line/ellipse ellipse p1x p1y p2x p2y)))
+                          (if (some #'complexp (list x1 y1 x2 y2))
+                              +nowhere+
+                              (make-line* x1 y1 x2 y2))))))
+        (with-slots (start-angle end-angle) ellipse
+          (when (or (null start-angle) (region-equal region +nowhere+))
+            (return-from region-intersection region))
+          (multiple-value-bind (cx cy) (ellipse-center-point* ellipse)
+            (multiple-value-bind (sx sy) (%ellipse-angle->position ellipse start-angle)
+              (multiple-value-bind (ex ey) (%ellipse-angle->position ellipse end-angle)
+                (let* ((start-ray (make-line* cx cy sx sy))
+                       (end-ray (make-line* cx cy ex ey))
+                       (si (region-intersection region start-ray))
+                       (ei (region-intersection region end-ray))
+                       (sip (not (region-equal +nowhere+ si)))
+                       (eip (not (region-equal +nowhere+ ei)))
+                       (p1 (single-float-point (line-start-point region)))
+                       (p2 (single-float-point (line-end-point region)))
+                       (p1p (multiple-value-call
+                                #'region-contains-position-p ellipse (point-position p1)))
+                       (p2p (multiple-value-call
+                                #'region-contains-position-p ellipse (point-position p2))))
+                  (cond
+                    ;; line goes through the center. Only in this case line may be
+                    ;; coincident with angle rays, so we don't have to bother with
+                    ;; checking later.
+                    ((region-contains-position-p region cx cy)
+                     (make-line (if p1p p1 (single-float-point (make-point cx cy)))
+                                (if p2p p2 (single-float-point (make-point cx cy)))))
+                    ;; line doesn't intersect any of angle rays
+                    ((and (not sip) (not eip))
+                     ;; p1p implies p2p here, but rounding may say otherwise
+                     (if (or p1p p2p) region +nowhere+))
+                    ;; line intersects with both angle rays
+                    ((and sip eip)
+                     ;; region difference may not work here due to float rounding
+                     (let ((guess-line (make-line p1 (single-float-point si))))
+                       (let ((intersection-line
+                              (if (not (region-intersects-region-p guess-line end-ray))
+                                  (region-union guess-line (make-line p2 (single-float-point ei)))
+                                  (let ((l1 (make-line p1 (single-float-point ei)))
+                                        (l2 (make-line p2 (single-float-point si))))
+                                    (region-union l1 l2)))))
+                         (if (linep intersection-line)
+                             intersection-line
+                             (error "Trying to intersect line ~S with
+                         ellipse ~S returned ~S which is not a line."
+                                    line ellipse intersection-line)))))
+                    ;; line intersect only one angle ray
+                    (t (make-line (if p1p p1 p2)
+                                  (single-float-point (if sip si ei))))))))))))))
 
 (defmethod region-intersection ((ellipse standard-ellipse) (line standard-line))
   (region-intersection line ellipse))
