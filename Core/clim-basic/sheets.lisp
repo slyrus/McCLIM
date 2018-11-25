@@ -112,6 +112,14 @@
               :initform t
               :accessor sheet-enabled-p)))
 
+;;; Internal flag used in sheets module. We could make it a macro which
+;;; accumulates regions to repaint with region-union and at the end repaints
+;;; whole bunch at one go. Could be useful for presentation highlighting when we
+;;; have many small areas to redraw. That could improve the performance.
+(defvar *inhibit-dispatch-repaint* nil
+  "Used when we plan to repaint whole sheet and we suspect that children may
+want to do the same.")
+
 ;;; Native region is volatile, and is only computed at the first
 ;;; request when it's equal to nil.
 ;;;

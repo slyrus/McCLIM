@@ -33,14 +33,6 @@
 (defmethod dispatch-repaint ((sheet graft) region)
   (declare (ignore sheet region)))
 
-;;; Internal flag used in sheets module. We could make it a macro which
-;;; accumulates regions to repaint with region-union and at the end repaints
-;;; whole bunch at one go. Could be useful for presentation highlighting when we
-;;; have many small areas to redraw. That could improve the performance.
-(defvar *inhibit-dispatch-repaint* nil
-  "Used when we plan to repaint whole sheet and we suspect that children may
-want to do the same.")
-
 (defmethod dispatch-repaint :around ((sheet basic-sheet) region)
   (unless *inhibit-dispatch-repaint* (call-next-method)))
 
