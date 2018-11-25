@@ -118,6 +118,7 @@
 
 (defmethod replay-output-record :before ((border bordered-output-record) stream
                                          &optional region (x-offset 0) (y-offset 0))
+  (declare (ignore region x-offset y-offset))
   (clear-output-record border)
   (%prepare-bordered-output-record border))
 

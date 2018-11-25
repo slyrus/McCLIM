@@ -1104,6 +1104,7 @@ and must never be nil.")
     :y-spacing 4))
 
 (defmethod compose-space ((gadget push-button-pane) &key width height)
+  (declare (ignore width height))
   (space-requirement+* (space-requirement+* (compose-label-space gadget)
                                             :min-width (* 2 (pane-x-spacing gadget))
                                             :width (* 2 (pane-x-spacing gadget))

@@ -24,6 +24,7 @@
                            (loop
                               (handler-case
                                   (maphash #'(lambda (key val)
+                                               (declare (ignore val))
                                                (when (typep key 'clx-fb-mirrored-sheet-mixin)
                                                  (image-mirror-to-x (sheet-mirror key))))
                                            (slot-value port 'climi::sheet->mirror))
@@ -107,13 +108,14 @@
 
 (defmethod port-force-output ((port clx-fb-port))
   (maphash #'(lambda (key val)
+               (declare (ignore val))
                (when (typep key 'clx-fb-mirrored-sheet-mixin)
                  (mcclim-render-internals::%mirror-force-output (sheet-mirror key))))
            (slot-value port 'climi::sheet->mirror))
   (xlib:display-force-output (clx-port-display port)))
 
 (defmethod get-next-event ((port clx-fb-port) &key wait-function (timeout nil))
-  (declare (ignore wait-function))
+  (declare (ignore wait-function timeout))
   (let* ((clim-clx::*clx-port* port)
          (display (clx-port-display port)))
     (unless (xlib:event-listen display)
