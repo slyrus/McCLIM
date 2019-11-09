@@ -468,103 +468,6 @@ in KEYWORDS removed."
 
 ;;;; ----------------------------------------------------------------------
 
-;;; FIXME valid space specification format is described in the section
-;;; describing a FORMATTING-TABLE macro. This should be generalized
-;;; for other possible space definitions and described in a separate
-;;; section. This functionality partially overlaps with a space
-;;; specification format described for the layout macros like
-;;; VERTICALLY, We should scram a superset of both in PARSE-SPACE and
-;;; add a special handling for the non-stream panes. -- jd 2019-11-02
-
-(deftype space-spec ()
-  `(or real
-       string
-       character
-       function
-       (cons real
-             (cons (member :character :line :point :pixel :mm)
-                   null))))
-
-(defun parse-space (stream specification direction)
-  "Returns the amount of space given by SPECIFICATION relating to the
-STREAM in the direction DIRECTION."
-  ;; This implementation lives under the assumption that an
-  ;; extended-output stream is also a sheet and has a graft.
-  ;; --GB 2002-08-14
-  (etypecase specification
-    (real specification)
-    ((or string character) (multiple-value-bind (width height)
-                               (text-size stream (string specification))
-                             (ecase direction
-                               (:horizontal width)
-                               (:vertical height))))
-    (function (let ((record (with-output-to-output-record (stream)
-                              (funcall specification))))
-                (ecase direction
-                  (:horizontal (bounding-rectangle-width record))
-                  (:vertical (bounding-rectangle-height record)))))
-    (cons
-     (destructuring-bind (value unit)
-         specification
-       (ecase unit
-         (:character
-          (ecase direction
-            (:horizontal (* value (stream-character-width stream #\M)))
-            (:vertical   (* value (stream-line-height stream)))))
-         (:line
-          (ecase direction
-            (:horizontal (* value (stream-line-width stream)))
-            (:vertical   (* value (stream-line-height stream)))))
-         ((:point :pixel :mm)
-          (let* ((graft (graft stream))
-                 (gunit (graft-units graft)))
-            ;; mungle specification into what grafts talk about
-            (case unit
-              ((:point) (setf value (/ value 72) unit :inches))
-              ((:pixel) (setf unit :device))
-              ((:mm)    (setf unit :millimeters)))
-            ;;
-            (multiple-value-bind (dx dy)
-                (multiple-value-call
-                    #'transform-distance
-                  (compose-transformation-with-scaling
-                   (sheet-delta-transformation stream graft)
-                   (/ (graft-width graft :units unit)
-                      (graft-width graft :units gunit))
-                   (/ (graft-height graft :units unit)
-                      (graft-height graft :units gunit)))
-                  (ecase direction
-                    (:horizontal (values 1 0))
-                    (:vertical   (values 0 1))))
-              (/ value (sqrt (+ (* dx dx) (* dy dy))))))))))))
-
-(defun valid-margin-spec-p (margins)
-  (ignore-errors ; destructuring-bind may error; that yields invalid spec
-   (destructuring-bind (&key left top right bottom) margins
-     (flet ((margin-spec-p (margin)
-              (destructuring-bind (anchor value) margin
-                (and (member anchor '(:relative :absolute))
-                     ;; Value must be a valid argument to PARSE-SPACE,
-                     ;; not necessarily a number. -- jd 2019-10-31
-                     (typep value 'space-spec)))))
-       (every #'margin-spec-p (list left top right bottom))))))
-
-(deftype margin-spec ()
-  `(satisfies valid-margin-spec-p))
-
-(defun normalize-margin-spec (plist defaults)
-  (loop with plist = (copy-list plist)
-        for edge in '(:left :top :right :bottom)
-        for value = (getf plist edge)
-        do
-           (typecase value
-             (null (setf (getf plist edge) (getf defaults edge)))
-             (atom (setf (getf plist edge) `(:relative ,value)))
-             (list #| do nothing |#))
-        finally
-           (check-type plist margin-spec)
-           (return plist)))
-
 (defun delete-1 (item list &key (test #'eql) (key #'identity))
   "Delete 1 ITEM from LIST. Second value is T if item was deleted."
   (loop
@@ -1002,3 +905,52 @@ to the BREAK-STRATEGY whenever it assigns any meaning to to them."
   (if (typep sheet '(or top-level-sheet-mixin null))
       sheet
       (get-top-level-sheet (sheet-parent sheet))))
+
+
+;;;
+;;; output-record convenience macros
+(defmacro define-invoke-with (macro-name func-name record-type doc-string)
+  `(defmacro ,macro-name ((stream
+                           &optional
+                           (record-type '',record-type)
+                           (record (gensym))
+                           &rest initargs)
+                          &body body)
+     ,doc-string
+     (setq stream (stream-designator-symbol stream '*standard-output*))
+     (with-gensyms (continuation)
+       (multiple-value-bind (bindings m-i-args)
+           (rebind-arguments initargs)
+         `(let ,bindings
+            (flet ((,continuation (,stream ,record)
+                     ,(declare-ignorable-form* stream record)
+                     ,@body))
+              (declare (dynamic-extent #',continuation))
+              (,',func-name ,stream #',continuation ,record-type ,@m-i-args)))))))
+
+(define-invoke-with with-new-output-record invoke-with-new-output-record
+  standard-sequence-output-record
+  "Creates a new output record of type RECORD-TYPE and then captures
+the output of BODY into the new output record, and inserts the new
+record into the current \"open\" output record assotiated with STREAM.
+    If RECORD is supplied, it is the name of a variable that will be
+lexically bound to the new output record inside the body. INITARGS are
+CLOS initargs that are passed to MAKE-INSTANCE when the new output
+record is created.
+    It returns the created output record.
+    The STREAM argument is a symbol that is bound to an output
+recording stream. If it is T, *STANDARD-OUTPUT* is used.")
+
+(define-invoke-with with-output-to-output-record
+    invoke-with-output-to-output-record
+  standard-sequence-output-record
+  "Creates a new output record of type RECORD-TYPE and then captures
+the output of BODY into the new output record. The cursor position of
+STREAM is initially bound to (0,0)
+    If RECORD is supplied, it is the name of a variable that will be
+lexically bound to the new output record inside the body. INITARGS are
+CLOS initargs that are passed to MAKE-INSTANCE when the new output
+record is created.
+    It returns the created output record.
+    The STREAM argument is a symbol that is bound to an output
+recording stream. If it is T, *STANDARD-OUTPUT* is used.")
